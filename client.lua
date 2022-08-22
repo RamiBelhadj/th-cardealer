@@ -887,6 +887,34 @@ CreateThread(function()
 end)
 
 
+--[[
+Citizen.CreateThread(function()
+	while true do
+
+		Wait(0)
+		local myPed = GetPlayerPed(-1)
+		local myCoord = GetEntityCoords(myPed)
+		
+		
+        local dist = GetDistanceBetweenCoords(myCoord.x, myCoord.y, myCoord.z, vector3(1186.9, -3256.38, 6.03), true)
+        if dist < 5 then
+            DrawMarker(1, vector3(1186.9, -3256.38, 6.03), 0, 0, 0, 0, 0, 0, 1.0, 1.0, 0.3, 255, 0, 0, 200, 0, 0, 0, 0)
+            if dist < 2 then
+                SetTextComponentFormat("STRING")
+                AddTextComponentString("open_tow_menu")
+                DisplayHelpTextFromStringLabel(0, 0, 1, -1)
+                if IsControlJustPressed(0, 38) then
+                    TriggerEvent('qb-vehicleshop:Client:BuyVehicles')
+                end
+            else
+                exports['qb-menu']:closeMenu()
+            end
+        end
+		
+	end
+end)
+
+]]
 RegisterNetEvent('qb-vehicleshop:Client:BuyVehicles', function()
     --print('asd')
     local categoryMenu = {
@@ -1007,3 +1035,50 @@ RegisterNetEvent('qb-vehicleshop:Client:spawnHauler', function()
     --  end
     
 end)
+
+
+
+Citizen.CreateThread(function()
+	while true do
+
+		Wait(0)
+		local myPed = GetPlayerPed(-1)
+		local myCoord = GetEntityCoords(myPed)
+		
+		
+        local dist = GetDistanceBetweenCoords(myCoord.x, myCoord.y, myCoord.z, vector3(-12.28, -1091.48, 26.68), true)
+        if dist < 5 then
+            DrawMarker(2, vector3(-12.28, -1091.48, 26.68),0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.3, 0.2, 0.15, 200, 0, 0, 222, false, false, false, true, false, false, false)
+            if dist < 2 then
+                
+                if IsControlJustPressed(0, 38) then
+                    local curVeh = GetVehiclePedIsIn(myPed)
+                    local saved = GetDisplayNameFromVehicleModel(GetEntityModel(curVeh)):lower()
+                    local plate = GetVehicleNumberPlateText(curVeh)
+                    QBCore.Functions.TriggerCallback('qb-vehicleshop:server:checkcar', function(owned)
+                        --if owned then
+                            DrawText3Ds(-12.28, -1091.48, 27.18, '~g~E~w~ - Garage')
+                            TriggerServerEvent('qb-vehicleshop:server:saveCar', saved,plate)
+                            for i = -1, 5,1 do                
+                                seat = GetPedInVehicleSeat(curVeh,i)
+                                if seat ~= 0 then
+                                    TaskLeaveVehicle(seat,curVeh,0)
+                                    SetVehicleDoorsLocked(curVeh)
+                                    Wait(1500)
+                                    QBCore.Functions.DeleteVehicle(curVeh)
+                                end
+                           end
+                          
+                        --else
+                        --    QBCore.Functions.Notify("Nobody owns this vehicle", "error", 3500)
+                        --end
+                    end, plate)
+                end
+            
+            end
+        end
+		
+	end
+end)
+
+
