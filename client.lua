@@ -885,3 +885,76 @@ CreateThread(function()
         end
     end
 end)
+
+
+RegisterNetEvent('qb-vehicleshop:Client:BuyVehicles', function()
+    --print('asd')
+    local categoryMenu = {
+        {
+            header = Lang:t('menus.goback_header'),
+            icon = "fa-solid fa-angle-left",
+            params = {
+                event = 'qb-vehicleshop:client:homeMenu'
+            }
+        }
+    }
+    for k, v in pairs(Config.Shops['pdm']['Categories']) do
+        --print(k)
+        categoryMenu[#categoryMenu + 1] = {
+            header = v,
+            icon = "fa-solid fa-circle",
+            params = {
+                event = 'qb-vehicleshop:client:openVehCatalogues',
+                args = {
+                    catName = k
+                }
+            }
+        }
+    end
+    exports['qb-menu']:openMenu(categoryMenu)
+end)
+
+local function round(x)
+    return x >= 0 and math.floor(x + 0.5) or math.ceil(x - 0.5)
+end
+
+RegisterNetEvent('qb-vehicleshop:client:openVehCatalogues', function(data)
+    local vehMenu = {
+        {
+            header = Lang:t('menus.goback_header'),
+            icon = "fa-solid fa-angle-left",
+            params = {
+                event = 'qb-vehicleshop:Client:BuyVehicles'
+            }
+        }
+    }
+   -- QBCore.Functions.TriggerCallback('qb-vehicleshop:server:getAvailableVehicles', function(vehicles)
+        --if vehicles then 
+            for k, v in pairs(QBCore.Shared.Vehicles) do
+               
+                if v["category"] == data.catName then
+                   
+                    price = round(v.price * 0.85)
+                    vehMenu[#vehMenu + 1] = {
+                        header = v.name,
+                        txt = Lang:t('menus.veh_price') .. price,
+                        icon = "fa-solid fa-car-side",
+                        params = {
+                            isServer = true,
+                            event = 'qb-vehicleshop:server:buyvehiclebycardealer',
+                            args = {
+                                model = v.model,
+                                price = price
+                            }
+                        }
+                    }
+                end
+            end
+            exports['qb-menu']:openMenu(vehMenu)
+        --else
+         --   TriggerEvent('QBCore:Notify', Lang:t('error.buyertoopoor'), 'error')
+         --   TriggerEvent('qb-vehicleshop:client:vehCategories')
+        --end
+    --end)
+    
+end)
