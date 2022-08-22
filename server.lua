@@ -1,7 +1,7 @@
 -- Variables
 --local QBCore = exports['qb-core']:GetCoreObject()
 local financetimer = {}
-
+local plates ={}
 -- Handlers
 -- Store game time for player when they load
 RegisterNetEvent('qb-vehicleshop:server:addPlayer', function(citizenid, gameTime)
@@ -12,16 +12,19 @@ end)
 RegisterNetEvent('qb-vehicleshop:server:removePlayer', function(citizenid)
     if financetimer[citizenid] then
         local playTime = financetimer[citizenid]
-        local financetime = exports.ghmattimysql:executeSync('SELECT * FROM player_vehicles WHERE citizenid = ?', {citizenid})
+        local financetime = MySQL.query.await('SELECT * FROM player_vehicles WHERE citizenid = ?', {citizenid})
         for _, v in pairs(financetime) do
             if v.balance >= 1 then
                 local newTime = math.floor(v.financetime - (((GetGameTimer() - playTime) / 1000) / 60))
                 if newTime < 0 then newTime = 0 end
-                exports['ghmattimysql']:execute('UPDATE player_vehicles SET financetime = ? WHERE plate = ?', {newTime, v.plate})
+                MySQL.update('UPDATE player_vehicles SET financetime = ? WHERE plate = ?', {newTime, v.plate})
             end
         end
+        financetimer[citizenid]  = nil
     end
-    financetimer[citizenid] = nil
+   
+        
+    
 end)
 
 -- Deduct stored game time from player on quit because we can't get citizenid
@@ -34,14 +37,14 @@ AddEventHandler('playerDropped', function()
         end
     end
     if license then
-        local vehicles = exports.ghmattimysql:executeSync('SELECT * FROM player_vehicles WHERE license = ?', {license})
+        local vehicles = MySQL.query.await('SELECT * FROM player_vehicles WHERE license = ?', {license})
         if vehicles then
             for _, v in pairs(vehicles) do
                 local playTime = financetimer[v.citizenid]
                 if v.balance >= 1 and playTime then
                     local newTime = math.floor(v.financetime - (((GetGameTimer() - playTime) / 1000) / 60))
                     if newTime < 0 then newTime = 0 end
-                    exports['ghmattimysql']:execute('UPDATE player_vehicles SET financetime = ? WHERE plate = ?', {newTime, v.plate})
+                    MySQL.update('UPDATE player_vehicles SET financetime = ? WHERE plate = ?', {newTime, v.plate})
                 end
             end
             if vehicles[1] and financetimer[vehicles[1].citizenid] then financetimer[vehicles[1].citizenid] = nil end
@@ -70,7 +73,7 @@ end
 
 local function GeneratePlate()
     local plate = QBCore.Shared.RandomInt(1) .. QBCore.Shared.RandomStr(2) .. QBCore.Shared.RandomInt(3) .. QBCore.Shared.RandomStr(2)
-    local result = exports.ghmattimysql:executeSync('SELECT plate FROM player_vehicles WHERE plate = ?', {plate})
+    local result = MySQL.scalar.await('SELECT plate FROM player_vehicles WHERE plate = ?', {plate})
     if result then
         return GeneratePlate()
     else
@@ -95,7 +98,7 @@ QBCore.Functions.CreateCallback('qb-vehicleshop:server:getVehicles', function(so
     local src = source
     local player = QBCore.Functions.GetPlayer(src)
     if player then
-        local vehicles = exports.ghmattimysql:executeSync('SELECT * FROM player_vehicles WHERE citizenid = ?', {player.PlayerData.citizenid})
+        local vehicles = MySQL.query.await('SELECT * FROM player_vehicles WHERE citizenid = ?', {player.PlayerData.citizenid})
         if vehicles[1] then
             cb(vehicles)
         end
@@ -141,10 +144,10 @@ RegisterNetEvent('qb-vehicleshop:server:financePayment', function(paymentAmount,
         if player and paymentAmount >= minPayment then
             if cash >= paymentAmount then
                 player.Functions.RemoveMoney('cash', paymentAmount)
-                exports['ghmattimysql']:execute('UPDATE player_vehicles SET balance = ?, paymentamount = ?, paymentsleft = ?, financetime = ? WHERE plate = ?', {newBalance, newPayment, newPaymentsLeft, timer, plate})
+                MySQL.update('UPDATE player_vehicles SET balance = ?, paymentamount = ?, paymentsleft = ?, financetime = ? WHERE plate = ?', {newBalance, newPayment, newPaymentsLeft, timer, plate})
             elseif bank >= paymentAmount then
                 player.Functions.RemoveMoney('bank', paymentAmount)
-                exports['ghmattimysql']:execute('UPDATE player_vehicles SET balance = ?, paymentamount = ?, paymentsleft = ?, financetime = ? WHERE plate = ?', {newBalance, newPayment, newPaymentsLeft, timer, plate})
+                MySQL.update('UPDATE player_vehicles SET balance = ?, paymentamount = ?, paymentsleft = ?, financetime = ? WHERE plate = ?', {newBalance, newPayment, newPaymentsLeft, timer, plate})
             else
                 TriggerClientEvent('QBCore:Notify', src, Lang:t('error.notenoughmoney'), 'error')
             end
@@ -168,10 +171,10 @@ RegisterNetEvent('qb-vehicleshop:server:financePaymentFull', function(data)
     if player and vehBalance ~= 0 then
         if cash >= vehBalance then
             player.Functions.RemoveMoney('cash', vehBalance)
-            exports['ghmattimysql']:execute('UPDATE player_vehicles SET balance = ?, paymentamount = ?, paymentsleft = ?, financetime = ? WHERE plate = ?', {0, 0, 0, 0, vehPlate})
+            MySQL.update('UPDATE player_vehicles SET balance = ?, paymentamount = ?, paymentsleft = ?, financetime = ? WHERE plate = ?', {0, 0, 0, 0, vehPlate})
         elseif bank >= vehBalance then
             player.Functions.RemoveMoney('bank', vehBalance)
-            exports['ghmattimysql']:execute('UPDATE player_vehicles SET balance = ?, paymentamount = ?, paymentsleft = ?, financetime = ? WHERE plate = ?', {0, 0, 0, 0, vehPlate})
+            MySQL.update('UPDATE player_vehicles SET balance = ?, paymentamount = ?, paymentsleft = ?, financetime = ? WHERE plate = ?', {0, 0, 0, 0, vehPlate})
         else
             TriggerClientEvent('QBCore:Notify', src, Lang:t('error.notenoughmoney'), 'error')
         end
@@ -191,7 +194,7 @@ RegisterNetEvent('qb-vehicleshop:server:buyShowroomVehicle', function(vehicle)
     local vehiclePrice = QBCore.Shared.Vehicles[vehicle]['price']
     local plate = GeneratePlate()
     if cash > tonumber(vehiclePrice) then
-        exports['ghmattimysql']:execute('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', {
+        MySQL.insert('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', {
             pData.PlayerData.license,
             cid,
             vehicle,
@@ -205,7 +208,7 @@ RegisterNetEvent('qb-vehicleshop:server:buyShowroomVehicle', function(vehicle)
         TriggerClientEvent('qb-vehicleshop:client:buyShowroomVehicle', src, vehicle, plate)
         pData.Functions.RemoveMoney('cash', vehiclePrice, 'vehicle-bought-in-showroom')
     elseif bank > tonumber(vehiclePrice) then
-        exports['ghmattimysql']:execute('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', {
+        MySQL.insert('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', {
             pData.PlayerData.license,
             cid,
             vehicle,
@@ -230,8 +233,6 @@ RegisterNetEvent('qb-vehicleshop:server:financeVehicle', function(downPayment, p
     paymentAmount = tonumber(paymentAmount)
     local pData = QBCore.Functions.GetPlayer(src)
     local cid = pData.PlayerData.citizenid
-    local cash = pData.PlayerData.money['cash']
-    local bank = pData.PlayerData.money['bank']
     local vehiclePrice = QBCore.Shared.Vehicles[vehicle]['price']
     local timer = (Config.PaymentInterval * 60)
     local minDown = tonumber(round((Config.MinimumDown / 100) * vehiclePrice))
@@ -240,26 +241,26 @@ RegisterNetEvent('qb-vehicleshop:server:financeVehicle', function(downPayment, p
     if paymentAmount > Config.MaximumPayments then return TriggerClientEvent('QBCore:Notify', src, Lang:t('error.exceededmax'), 'error') end
     local plate = GeneratePlate()
     local balance, vehPaymentAmount = calculateFinance(vehiclePrice, downPayment, paymentAmount)
-    if cash >= downPayment then
-        exports['ghmattimysql']:execute('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state, balance, paymentamount, paymentsleft, financetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
-            pData.PlayerData.license,
-            cid,
-            vehicle,
-            GetHashKey(vehicle),
-            '{}',
-            plate,
-            'pillboxgarage',
-            0,
-            balance,
-            vehPaymentAmount,
-            paymentAmount,
-            timer
-        })
-        TriggerClientEvent('QBCore:Notify', src, Lang:t('success.purchased'), 'success')
-        TriggerClientEvent('qb-vehicleshop:client:buyShowroomVehicle', src, vehicle, plate)
+    --if cash >= downPayment then
+    MySQL.insert('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state, balance, paymentamount, paymentsleft, financetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
+        pData.PlayerData.license,
+        cid,
+        vehicle,
+        GetHashKey(vehicle),
+        '{}',
+        plate,
+        'pillboxgarage',
+        0,
+        balance,
+        vehPaymentAmount,
+        paymentAmount,
+        timer
+    })
+    TriggerClientEvent('QBCore:Notify', src, Lang:t('success.purchased'), 'success')
+    TriggerClientEvent('qb-vehicleshop:client:buyShowroomVehicle', src, vehicle, plate)
         pData.Functions.RemoveMoney('cash', downPayment, 'vehicle-bought-in-showroom')
-    elseif bank >= downPayment then
-        exports['ghmattimysql']:execute('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state, balance, paymentamount, paymentsleft, financetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
+    --[[elseif bank >= downPayment then
+        MySQL.insert('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state, balance, paymentamount, paymentsleft, financetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
             pData.PlayerData.license,
             cid,
             vehicle,
@@ -275,10 +276,10 @@ RegisterNetEvent('qb-vehicleshop:server:financeVehicle', function(downPayment, p
         })
         TriggerClientEvent('QBCore:Notify', src, Lang:t('success.purchased'), 'success')
         TriggerClientEvent('qb-vehicleshop:client:buyShowroomVehicle', src, vehicle, plate)
-        pData.Functions.RemoveMoney('bank', downPayment, 'vehicle-bought-in-showroom')
-    else
-        TriggerClientEvent('QBCore:Notify', src, Lang:t('error.notenoughmoney'), 'error')
-    end
+        pData.Functions.RemoveMoney('bank', downPayment, 'vehicle-bought-in-showroom')]]
+    --else
+    --    TriggerClientEvent('QBCore:Notify', src, Lang:t('error.notenoughmoney'), 'error')
+    --end
 end)
 
 -- Sell vehicle to customer
@@ -294,14 +295,14 @@ RegisterNetEvent('qb-vehicleshop:server:sellShowroomVehicle', function(data, pla
 
     if #(GetEntityCoords(GetPlayerPed(src)) - GetEntityCoords(GetPlayerPed(target.PlayerData.source))) < 3 then
         local cid = target.PlayerData.citizenid
-        local cash = target.PlayerData.money['cash']
-        local bank = target.PlayerData.money['bank']
+        local account = exports['qb-management']:GetAccount('cardealer')
+        
         local vehicle = data
         local vehiclePrice = QBCore.Shared.Vehicles[vehicle]['price']
         local commission = round(vehiclePrice * Config.Commission)
         local plate = GeneratePlate()
-        if cash >= tonumber(vehiclePrice) then
-            exports['ghmattimysql']:execute('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', {
+        --if tonumber(account) >= tonumber(vehiclePrice) then
+            MySQL.insert('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', {
                 target.PlayerData.license,
                 cid,
                 vehicle,
@@ -312,31 +313,16 @@ RegisterNetEvent('qb-vehicleshop:server:sellShowroomVehicle', function(data, pla
                 0
             })
             TriggerClientEvent('qb-vehicleshop:client:buyShowroomVehicle', target.PlayerData.source, vehicle, plate)
-            target.Functions.RemoveMoney('cash', vehiclePrice, 'vehicle-bought-in-showroom')
+            --exports['qb-management']:RemoveMoney('cardealer',vehiclePrice)
+            
+            --target.Functions.RemoveMoney('cash', vehiclePrice, 'vehicle-bought-in-showroom')
             player.Functions.AddMoney('bank', commission)
             TriggerClientEvent('QBCore:Notify', src, Lang:t('success.earned_commission', {amount = comma_value(commission)}), 'success')
-            exports['qb-management']:AddMoney(player.PlayerData.job.name, vehiclePrice)
+            --exports['qb-management']:AddMoney(player.PlayerData.job.name, vehiclePrice)
             TriggerClientEvent('QBCore:Notify', target.PlayerData.source, Lang:t('success.purchased'), 'success')
-        elseif bank >= tonumber(vehiclePrice) then
-            exports['ghmattimysql']:execute('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', {
-                target.PlayerData.license,
-                cid,
-                vehicle,
-                GetHashKey(vehicle),
-                '{}',
-                plate,
-                'pillboxgarage',
-                0
-            })
-            TriggerClientEvent('qb-vehicleshop:client:buyShowroomVehicle', target.PlayerData.source, vehicle, plate)
-            target.Functions.RemoveMoney('bank', vehiclePrice, 'vehicle-bought-in-showroom')
-            player.Functions.AddMoney('bank', commission)
-            exports['qb-management']:AddMoney(player.PlayerData.job.name, vehiclePrice)
-            TriggerClientEvent('QBCore:Notify', src, Lang:t('success.earned_commission', {amount = comma_value(commission)}), 'success')
-            TriggerClientEvent('QBCore:Notify', target.PlayerData.source, Lang:t('success.purchased'), 'success')
-        else
-            TriggerClientEvent('QBCore:Notify', src, Lang:t('error.notenoughmoney'), 'error')
-        end
+        --else
+        --    TriggerClientEvent('QBCore:Notify', src, Lang:t('error.notenoughmoney'), 'error')
+        --end
     else
         TriggerClientEvent('QBCore:Notify', src, Lang:t('error.playertoofar'), 'error')
     end
@@ -368,8 +354,8 @@ RegisterNetEvent('qb-vehicleshop:server:sellfinanceVehicle', function(downPaymen
         local commission = round(vehiclePrice * Config.Commission)
         local plate = GeneratePlate()
         local balance, vehPaymentAmount = calculateFinance(vehiclePrice, downPayment, paymentAmount)
-        if cash >= downPayment then
-            exports['ghmattimysql']:execute('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state, balance, paymentamount, paymentsleft, financetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
+        --if cash >= downPayment then
+            MySQL.insert('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state, balance, paymentamount, paymentsleft, financetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
                 target.PlayerData.license,
                 cid,
                 vehicle,
@@ -384,13 +370,13 @@ RegisterNetEvent('qb-vehicleshop:server:sellfinanceVehicle', function(downPaymen
                 timer
             })
             TriggerClientEvent('qb-vehicleshop:client:buyShowroomVehicle', target.PlayerData.source, vehicle, plate)
-            target.Functions.RemoveMoney('cash', downPayment, 'vehicle-bought-in-showroom')
+            --target.Functions.RemoveMoney('cash', downPayment, 'vehicle-bought-in-showroom')
             player.Functions.AddMoney('bank', commission)
             TriggerClientEvent('QBCore:Notify', src, Lang:t('success.earned_commission', {amount = comma_value(commission)}), 'success')
-            exports['qb-management']:AddMoney(player.PlayerData.job.name, vehiclePrice)
+            --exports['qb-management']:AddMoney(player.PlayerData.job.name, vehiclePrice)
             TriggerClientEvent('QBCore:Notify', target.PlayerData.source, Lang:t('success.purchased'), 'success')
-        elseif bank >= downPayment then
-            exports['ghmattimysql']:execute('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state, balance, paymentamount, paymentsleft, financetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
+        --[[elseif bank >= downPayment then
+            MySQL.insert('INSERT INTO player_vehicles (license, citizenid, vehicle, hash, mods, plate, garage, state, balance, paymentamount, paymentsleft, financetime) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)', {
                 target.PlayerData.license,
                 cid,
                 vehicle,
@@ -412,7 +398,7 @@ RegisterNetEvent('qb-vehicleshop:server:sellfinanceVehicle', function(downPaymen
             TriggerClientEvent('QBCore:Notify', target.PlayerData.source, Lang:t('success.purchased'), 'success')
         else
             TriggerClientEvent('QBCore:Notify', src, Lang:t('error.notenoughmoney'), 'error')
-        end
+        end]]
     else
         TriggerClientEvent('QBCore:Notify', src, Lang:t('error.playertoofar'), 'error')
     end
@@ -423,17 +409,17 @@ RegisterNetEvent('qb-vehicleshop:server:checkFinance', function()
     local src = source
     local player = QBCore.Functions.GetPlayer(src)
     local query = 'SELECT * FROM player_vehicles WHERE citizenid = ? AND balance > 0 AND financetime < 1'
-    local result = exports.ghmattimysql:executeSync(query, {player.PlayerData.citizenid})
+    local result = MySQL.query.await(query, {player.PlayerData.citizenid})
     if result[1] then
         TriggerClientEvent('QBCore:Notify', src, Lang:t('general.paymentduein', {time = Config.PaymentWarning}))
-        Wait(Config.PaymentWarning * 60000)
-        local vehicles = exports.ghmattimysql:executeSync(query, {player.PlayerData.citizenid})
-        for _, v in pairs(vehicles) do
-            local plate = v.plate
-            exports['ghmattimysql']:execute('DELETE FROM player_vehicles WHERE plate = @plate', {['@plate'] = plate})
+        --Wait(Config.PaymentWarning * 60000)
+        --local vehicles = MySQL.query.await(query, {player.PlayerData.citizenid})
+        --for _, v in pairs(vehicles) do
+         --   local plate = v.plate
+         --   MySQL.query('DELETE FROM player_vehicles WHERE plate = @plate', {['@plate'] = plate})
             --MySQL.update('UPDATE player_vehicles SET citizenid = ? WHERE plate = ?', {'REPO-'..v.citizenid, plate}) -- Use this if you don't want them to be deleted
-            TriggerClientEvent('QBCore:Notify', src, Lang:t('error.repossessed', {plate = plate}), 'error')
-        end
+        --    TriggerClientEvent('QBCore:Notify', src, Lang:t('error.repossessed', {plate = plate}), 'error')
+        --end
     end
 end)
 
@@ -452,7 +438,7 @@ QBCore.Commands.Add('transfervehicle', Lang:t('general.command_transfervehicle')
     if not plate then return TriggerClientEvent('QBCore:Notify', src, Lang:t('error.vehinfo'), 'error') end
     local player = QBCore.Functions.GetPlayer(src)
     local target = QBCore.Functions.GetPlayer(buyerId)
-    local row = exports.ghmattimysql:executeSync('SELECT * FROM player_vehicles WHERE plate = ?', {plate})
+    local row = MySQL.single.await('SELECT * FROM player_vehicles WHERE plate = ?', {plate})
     if Config.PreventFinanceSelling then
         if row.balance > 0 then return TriggerClientEvent('QBCore:Notify', src, Lang:t('error.financed'), 'error') end
     end
@@ -462,21 +448,21 @@ QBCore.Commands.Add('transfervehicle', Lang:t('general.command_transfervehicle')
     local targetlicense = QBCore.Functions.GetIdentifier(target.PlayerData.source, 'license')
     if not target then return TriggerClientEvent('QBCore:Notify', src, Lang:t('error.buyerinfo'), 'error') end
     if not sellAmount then
-        exports['ghmattimysql']:execute('UPDATE player_vehicles SET citizenid = ?, license = ? WHERE plate = ?', {targetcid, targetlicense, plate})
+        MySQL.update('UPDATE player_vehicles SET citizenid = ?, license = ? WHERE plate = ?', {targetcid, targetlicense, plate})
         TriggerClientEvent('QBCore:Notify', src, Lang:t('success.gifted'), 'success')
         TriggerClientEvent('vehiclekeys:client:SetOwner', buyerId, plate)
         TriggerClientEvent('QBCore:Notify', buyerId, Lang:t('success.received_gift'), 'success')
         return
     end
     if target.Functions.GetMoney('cash') > sellAmount then
-        exports['ghmattimysql']:execute('UPDATE player_vehicles SET citizenid = ?, license = ? WHERE plate = ?', {targetcid, targetlicense, plate})
+        MySQL.update('UPDATE player_vehicles SET citizenid = ?, license = ? WHERE plate = ?', {targetcid, targetlicense, plate})
         player.Functions.AddMoney('cash', sellAmount)
         target.Functions.RemoveMoney('cash', sellAmount)
         TriggerClientEvent('QBCore:Notify', src, Lang:t('success.soldfor') .. comma_value(sellAmount), 'success')
         TriggerClientEvent('vehiclekeys:client:SetOwner', buyerId, plate)
         TriggerClientEvent('QBCore:Notify', buyerId, Lang:t('success.boughtfor') .. comma_value(sellAmount), 'success')
     elseif target.Functions.GetMoney('bank') > sellAmount then
-        exports['ghmattimysql']:execute('UPDATE player_vehicles SET citizenid = ?, license = ? WHERE plate = ?', {targetcid, targetlicense, plate})
+        MySQL.update('UPDATE player_vehicles SET citizenid = ?, license = ? WHERE plate = ?', {targetcid, targetlicense, plate})
         player.Functions.AddMoney('bank', sellAmount)
         target.Functions.RemoveMoney('bank', sellAmount)
         TriggerClientEvent('QBCore:Notify', src, Lang:t('success.soldfor') .. comma_value(sellAmount), 'success')
@@ -485,4 +471,55 @@ QBCore.Commands.Add('transfervehicle', Lang:t('general.command_transfervehicle')
     else
         TriggerClientEvent('QBCore:Notify', src, Lang:t('error.buyertoopoor'), 'error')
     end
+end)
+
+
+QBCore.Functions.CreateCallback('qb-vehicleshop:server:getAvailableVehicles', function(source, cb)
+    local src = source
+    
+    local vehicles = MySQL.query.await('SELECT * FROM cardealer_vehicles where number > 0', {})
+    if vehicles[1] then
+        cb(vehicles)
+    end
+    cb(nil)
+end)
+
+
+QBCore.Functions.CreateCallback('qb-vehicleshop:server:getFinancedVehicles', function(source, cb)
+    local src = source
+    local vehicles = MySQL.query.await('SELECT * FROM player_vehicles WHERE balance > 0', {})
+    if vehicles[1] then
+        cb(vehicles)
+    end
+    cb(nil)
+end)
+
+RegisterServerEvent('qb-vehicleshop:server:saveplate',function(plate)
+    plates[plate] = plate
+end)
+
+RegisterServerEvent('qb-vehicleshop:server:buyvehiclebycardealer',function(data)
+    exports['qb-management']:RemoveMoney('cardealer',data.price)
+    TriggerClientEvent('qb-vehicleshop:client:spawnVehicle',source,data.model)
+end)
+
+
+RegisterServerEvent('qb-vehicleshop:server:saveCar', function(model, plate)
+    MySQL.insert('INSERT INTO cardealer_vehicles (vehicle, hash, number) VALUES (@vehicle, @hash, @number) ON DUPLICATE KEY UPDATE number = number + @number', {
+        ['@vehicle'] = model,
+        ['@hash'] = model,
+        ['@number'] = 1,
+    })
+
+    plates[plate] = nil
+end)
+
+QBCore.Functions.CreateCallback('qb-vehicleshop:server:checkcar', function(source, cb, plate)
+    
+    if plates[plate]~= nil then
+        cb(true)
+    else
+        cb(false)
+    end
+    
 end)
