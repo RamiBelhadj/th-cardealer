@@ -13,9 +13,9 @@ local insideShop, tempShop = nil, nil
 AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
     PlayerData = QBCore.Functions.GetPlayerData()
     local citizenid = PlayerData.citizenid
-    --local gameTime = GetGameTimer()
-    --TriggerServerEvent('qb-vehicleshop:server:addPlayer', citizenid, gameTime)
-    --TriggerServerEvent('qb-vehicleshop:server:checkFinance')
+    local gameTime = GetGameTimer()
+    TriggerServerEvent('qb-vehicleshop:server:addPlayer', citizenid, gameTime)
+    TriggerServerEvent('qb-vehicleshop:server:checkFinance')
     if not Initialized then Init() end
 end)
 

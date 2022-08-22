@@ -1,6 +1,6 @@
 Config = {}
-Config.UsingTarget = GetConvar('UseTarget', 'false') == 'true'
-Config.Commission = 0.10 -- Percent that goes to sales person from a full car sale 10%
+Config.UsingTarget = true
+Config.Commission = 0.05 -- Percent that goes to sales person from a full car sale 10%
 Config.FinanceCommission = 0.05 -- Percent that goes to sales person from a finance sale 5%
 Config.FinanceZone = vector3(-29.53, -1103.67, 26.42)-- Where the finance menu is located
 Config.PaymentWarning = 10 -- time in minutes that player has to make payment before repo
@@ -10,7 +10,7 @@ Config.MaximumPayments = 24 -- maximum payments allowed
 Config.PreventFinanceSelling = false -- allow/prevent players from using /transfervehicle if financed
 Config.Shops = {
     ['pdm'] = {
-        ['Type'] = 'free-use', -- no player interaction is required to purchase a car
+        ['Type'] = 'managed', -- no player interaction is required to purchase a car
         ['Zone'] = {
             ['Shape'] = {--polygon that surrounds the shop
                 vector2(-56.727394104004, -1086.2325439453),
@@ -26,7 +26,7 @@ Config.Shops = {
             ['maxZ'] = 28.0, -- max height of the shop zone
             ['size'] = 2.75 -- size of the vehicles zones
         },
-        ['Job'] = 'none', -- Name of job or none
+        ['Job'] = 'cardealer', -- Name of job or none
         ['ShopLabel'] = 'Premium Deluxe Motorsport', -- Blip name
         ['showBlip'] = true, -- true or false
         ['blipSprite'] = 326, -- Blip sprite
@@ -41,7 +41,9 @@ Config.Shops = {
             ['compacts'] = 'Compacts',
             ['motorcycles'] = 'Motorcycles',
             ['vans'] = 'Vans',
-            ['cycles'] = 'Bicycles'
+            ['cycles'] = 'Bicycles',
+            ['super'] = 'Super',
+            ['sports'] = 'Sports'
         },
         ['TestDriveTimeLimit'] = 0.5, -- Time in minutes until the vehicle gets deleted
         ['Location'] = vector3(-45.67, -1098.34, 26.42), -- Blip Location
@@ -64,33 +66,10 @@ Config.Shops = {
                 defaultVehicle = 'comet2',
                 chosenVehicle = 'comet2'
             },
-            [4] = {
-                coords = vector4(-51.21, -1096.77, 25.44, 254.5),
-                defaultVehicle = 'vigero',
-                chosenVehicle = 'vigero'
-            },
-            [5] = {
-                coords = vector4(-40.18, -1104.13, 25.44, 338.5),
-                defaultVehicle = 't20',
-                chosenVehicle = 't20'
-            },
-            [6] = {
-                coords = vector4(-43.31, -1099.02, 25.44, 52.5),
-                defaultVehicle = 'bati',
-                chosenVehicle = 'bati'
-            },
-            [7] = {
-                coords = vector4(-50.66, -1093.05, 25.44, 222.5),
-                defaultVehicle = 'bati',
-                chosenVehicle = 'bati'
-            },
-            [8] = {
-                coords = vector4(-44.28, -1102.47, 25.44, 298.5),
-                defaultVehicle = 'bati',
-                chosenVehicle = 'bati'
-            }
+            
         },
     },
+    --[[
     ['luxury'] = {
         ['Type'] = 'managed', -- meaning a real player has to sell the car
         ['Zone'] = {
@@ -254,5 +233,5 @@ Config.Shops = {
                 chosenVehicle = 'frogger'
             },
         },
-    },
+    },]]
 }
