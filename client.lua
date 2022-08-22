@@ -1,6 +1,6 @@
 -- Variables
-local QBCore = exports['qb-core']:GetCoreObject()
-local PlayerData = QBCore.Functions.GetPlayerData()
+--local QBCore = exports['qb-core']:GetCoreObject()
+local PlayerData = {}
 local testDriveZone = nil
 local vehicleMenu = {}
 local Initialized = false
@@ -13,9 +13,9 @@ local insideShop, tempShop = nil, nil
 AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
     PlayerData = QBCore.Functions.GetPlayerData()
     local citizenid = PlayerData.citizenid
-    local gameTime = GetGameTimer()
-    TriggerServerEvent('qb-vehicleshop:server:addPlayer', citizenid, gameTime)
-    TriggerServerEvent('qb-vehicleshop:server:checkFinance')
+    --local gameTime = GetGameTimer()
+    --TriggerServerEvent('qb-vehicleshop:server:addPlayer', citizenid, gameTime)
+    --TriggerServerEvent('qb-vehicleshop:server:checkFinance')
     if not Initialized then Init() end
 end)
 
@@ -40,7 +40,7 @@ local vehHeaderMenu = {
         }
     }
 }
-
+--[[
 local financeMenu = {
     {
         header = Lang:t('menus.financed_header'),
@@ -51,7 +51,7 @@ local financeMenu = {
         }
     }
 }
-
+]]
 local returnTestDrive = {
     {
         header = Lang:t('menus.returnTestDrive_header'),
