@@ -958,3 +958,52 @@ RegisterNetEvent('qb-vehicleshop:client:openVehCatalogues', function(data)
     --end)
     
 end)
+
+
+
+
+RegisterNetEvent('qb-vehicleshop:client:spawnVehicle', function(model)
+    QBCore.Functions.TriggerCallback('QBCore:Server:SpawnVehicle', function(netId)
+        local veh = NetToVeh(netId)
+        exports['LegacyFuel']:SetFuel(veh, 100)
+        SetVehicleNumberPlateText(veh, QBCore.Shared.RandomInt(1) .. QBCore.Shared.RandomStr(2) .. QBCore.Shared.RandomInt(3) .. QBCore.Shared.RandomStr(2))
+        TriggerEvent('vehiclekeys:client:SetOwner', QBCore.Functions.GetPlate(veh))
+       
+        TriggerServerEvent('qb-vehicleshop:server:saveplate',QBCore.Functions.GetPlate(veh))
+    end, model, vector3(1182.39, -3240.06, 6.03), true)
+end)
+
+RegisterNetEvent('qb-vehicleshop:Client:spawnHauler', function()
+    
+   -- if not IsAnyVehicleNearPoint(-20.9, -1118.07, 26.82, 5.0) then
+        RequestModel("hauler")
+        while not HasModelLoaded("hauler") do
+            Citizen.Wait(0)
+        end
+        local veh = CreateVehicle("hauler", -20.9, -1118.07, 26.82, 172.04, true, false)
+        RequestModel("tr2")
+        while not HasModelLoaded("tr2") do
+            Citizen.Wait(0)
+        end
+    
+        local trailer = CreateVehicle("tr2", -20.9, -1118.07, 26.82, 172.04, true, false)
+        print(veh, trailer)
+        AttachVehicleToTrailer(veh, trailer, 1.1)
+        
+    
+        SetVehicleHasBeenOwnedByPlayer(veh,  true)
+        SetEntityAsMissionEntity(veh,  true,  true)
+        local id = NetworkGetNetworkIdFromEntity(veh)
+        SetNetworkIdCanMigrate(id, true)
+    
+        SetVehicleNumberPlateText(veh, QBCore.Shared.RandomInt(1) .. QBCore.Shared.RandomStr(2) .. QBCore.Shared.RandomInt(3) .. QBCore.Shared.RandomStr(2))
+        TriggerEvent('vehiclekeys:client:SetOwner', QBCore.Functions.GetPlate(veh))
+        
+    
+        SetVehRadioStation(veh, "OFF")
+        TaskWarpPedIntoVehicle(playerPed, veh, -1)
+        isJobVehicleDestroyed = false
+    
+    --  end
+    
+end)
