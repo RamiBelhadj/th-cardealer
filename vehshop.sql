@@ -36,3 +36,10 @@ ALTER TABLE `player_vehicles`
 ADD COLUMN `paymentsleft` int(11) NOT NULL DEFAULT 0;
 ALTER TABLE `player_vehicles`
 ADD COLUMN `financetime` int(11) NOT NULL DEFAULT 0;
+
+CREATE TABLE `cardealer_vehicles` (
+  `id` int(11) NOT NULL,
+  `vehicle` varchar(50) DEFAULT NULL,
+  `hash` varchar(50) DEFAULT NULL,
+  `number` int(11) DEFAULT 0
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
